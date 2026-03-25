@@ -1,0 +1,18 @@
+<resources xmlns:tools="http://schemas.android.com/tools">
+    <!--
+        父主题来自 com.google.android.material:material（已在 build.gradle.kts 声明）。
+        Theme.MaterialComponents.DayNight.NoActionBar 等价于
+        Theme.Material3.DayNight.NoActionBar，但只需 material:1.x，无需额外 bridge 库。
+    -->
+    <style name="Theme.CardNoteApp" parent="Theme.MaterialComponents.DayNight.NoActionBar">
+        <item name="android:statusBarColor">@android:color/transparent</item>
+        <item name="android:navigationBarColor">@android:color/transparent</item>
+        <item name="android:windowTranslucentStatus">false</item>
+        <item name="android:windowTranslucentNavigation">false</item>
+        <item name="android:enforceStatusBarContrast" tools:targetApi="q">false</item>
+        <item name="android:enforceNavigationBarContrast" tools:targetApi="q">false</item>
+    </style>
+
+    <!-- Manifest 中 Activity 引用的别名 -->
+    <style name="Theme.CardNoteApp.NoActionBar" parent="Theme.CardNoteApp" />
+</resources>

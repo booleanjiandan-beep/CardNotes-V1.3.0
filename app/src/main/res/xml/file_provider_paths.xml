@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<paths>
+    <!-- 拍照临时文件存放在缓存目录 -->
+    <cache-path name="camera_photos" path="." />
+    <!-- 私有图片目录（供外部 Intent 访问，如分享） -->
+    <files-path name="note_images" path="note_images/" />
+</paths>
