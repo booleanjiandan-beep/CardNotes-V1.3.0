@@ -404,30 +404,68 @@ fun FilterHeader(
                 }
 
                 // 标题 or 搜索框
-                AnimatedVisibility(!isSearchActive, modifier = Modifier.weight(1f),
-                    enter = fadeIn() + expandHorizontally(), exit = fadeOut() + shrinkHorizontally()) {
-                    Column {
-                        Text("卡片笔记", fontSize = 20.sp, fontWeight = FontWeight.Bold, color = Color.White)
-                        if (selectedCatName != null)
-                            Text(selectedCatName, fontSize = 11.sp, color = Color(0xFF6C63FF))
-                        else
-                            Text("共 $totalCount 条", fontSize = 11.sp, color = Color(0xFF8888AA))
+
+                AnimatedContent(
+                    targetState = isSearchActive,
+                    transitionSpec = {
+                        fadeIn(animationSpec = tween(220)) + 
+                        expandVertically(animationSpec = tween(220)) togetherWith 
+                        fadeOut(animationSpec = tween(220)) + 
+                        shrinkVertically(animationSpec = tween(220))
+                    },
+                    modifier = Modifier.weight(1f)
+                ) { isSearching ->
+                    if (!isSearching) {
+                        // 原标题 Column
+                        Column {
+                            Text("卡片笔记", fontSize = 20.sp, fontWeight = FontWeight.Bold, color = Color.White)
+                            if (selectedCatName != null)
+                                Text(selectedCatName, fontSize = 11.sp, color = Color(0xFF6C63FF))
+                            else
+                                Text("共 $totalCount 条", fontSize = 11.sp, color = Color(0xFF8888AA))
+                        }
+                    } else {
+                        // 搜索框
+                        OutlinedTextField(
+                            value = searchQuery,
+                            onValueChange = onSearchQueryChange,
+                            modifier = Modifier.fillMaxWidth().height(56.dp).focusRequester(focusReq),
+                            placeholder = { Text("搜索名称、URL、备注…", color = Color(0xFF5555AA), fontSize = 13.sp) },
+                            singleLine = true,
+                            shape = RoundedCornerShape(12.dp),
+                            colors = OutlinedTextFieldDefaults.colors(...),
+                            leadingIcon = { Icon(Icons.Default.Search, null, tint = Color(0xFF6C63FF), modifier = Modifier.size(16.dp)) },
+                            trailingIcon = { if (searchQuery.isNotEmpty()) ... },
+                            textStyle = androidx.compose.ui.text.TextStyle(fontSize = 13.sp)
+                        )
                     }
                 }
-                AnimatedVisibility(isSearchActive, modifier = Modifier.weight(1f),
-                    enter = fadeIn() + expandHorizontally(), exit = fadeOut() + shrinkHorizontally()) {
-                    OutlinedTextField(value = searchQuery, onValueChange = onSearchQueryChange,
-                        modifier = Modifier.fillMaxWidth().focusRequester(focusReq),
-                        placeholder = { Text("搜索名称、URL、备注…", color = Color(0xFF5555AA), fontSize = 13.sp) },
-                        singleLine = true, shape = RoundedCornerShape(12.dp),
-                        colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = Color(0xFF6C63FF),
-                            unfocusedBorderColor = Color(0xFF3A3A55), focusedTextColor = Color.White,
-                            unfocusedTextColor = Color.White, cursorColor = Color(0xFF6C63FF),
-                            focusedContainerColor = Color(0xFF252535), unfocusedContainerColor = Color(0xFF252535)),
-                        leadingIcon = { Icon(Icons.Default.Search, null, tint = Color(0xFF6C63FF), modifier = Modifier.size(16.dp)) },
-                        trailingIcon = { if (searchQuery.isNotEmpty()) IconButton(onClick = { onSearchQueryChange("") }) { Icon(Icons.Default.Close, null, tint = Color(0xFF8888AA), modifier = Modifier.size(14.dp)) } },
-                        textStyle = androidx.compose.ui.text.TextStyle(fontSize = 13.sp))
-                }
+
+                
+                // AnimatedVisibility(!isSearchActive, modifier = Modifier.weight(1f),
+                //     enter = fadeIn() + expandHorizontally(), exit = fadeOut() + shrinkHorizontally()) {
+                //     Column {
+                //         Text("卡片笔记", fontSize = 20.sp, fontWeight = FontWeight.Bold, color = Color.White)
+                //         if (selectedCatName != null)
+                //             Text(selectedCatName, fontSize = 11.sp, color = Color(0xFF6C63FF))
+                //         else
+                //             Text("共 $totalCount 条", fontSize = 11.sp, color = Color(0xFF8888AA))
+                //     }
+                // }
+                // AnimatedVisibility(isSearchActive, modifier = Modifier.weight(1f),
+                //     enter = fadeIn() + expandHorizontally(), exit = fadeOut() + shrinkHorizontally()) {
+                //     OutlinedTextField(value = searchQuery, onValueChange = onSearchQueryChange,
+                //         modifier = Modifier.fillMaxWidth().focusRequester(focusReq),
+                //         placeholder = { Text("搜索名称、URL、备注…", color = Color(0xFF5555AA), fontSize = 13.sp) },
+                //         singleLine = true, shape = RoundedCornerShape(12.dp),
+                //         colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = Color(0xFF6C63FF),
+                //             unfocusedBorderColor = Color(0xFF3A3A55), focusedTextColor = Color.White,
+                //             unfocusedTextColor = Color.White, cursorColor = Color(0xFF6C63FF),
+                //             focusedContainerColor = Color(0xFF252535), unfocusedContainerColor = Color(0xFF252535)),
+                //         leadingIcon = { Icon(Icons.Default.Search, null, tint = Color(0xFF6C63FF), modifier = Modifier.size(16.dp)) },
+                //         trailingIcon = { if (searchQuery.isNotEmpty()) IconButton(onClick = { onSearchQueryChange("") }) { Icon(Icons.Default.Close, null, tint = Color(0xFF8888AA), modifier = Modifier.size(14.dp)) } },
+                //         textStyle = androidx.compose.ui.text.TextStyle(fontSize = 13.sp))
+                // }
 
                 // 搜索图标
                 IconButton(onClick = onToggleSearch,
