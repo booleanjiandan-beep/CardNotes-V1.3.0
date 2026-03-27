@@ -1329,17 +1329,57 @@ fun HighlightText(text: String, query: String, baseColor: Color,
 // ═══════════════════════════════════════
 // 页码指示器
 // ═══════════════════════════════════════
+
 @Composable
 fun PageIndicator(currentPage: Int, pageCount: Int, modifier: Modifier = Modifier) {
-    Row(modifier = modifier, horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
-        repeat(pageCount.coerceAtMost(8)) { i ->
-            Box(modifier = Modifier.animateContentSize(spring(dampingRatio = Spring.DampingRatioMediumBouncy))
-                .size(width = if (i == currentPage) 24.dp else 8.dp, height = 8.dp).clip(CircleShape)
-                .background(if (i == currentPage) Color(0xFF6C63FF) else Color.White.copy(0.3f)))
+    Row(
+        modifier = modifier,
+        horizontalArrangement = Arrangement.spacedBy(6.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        // 最多显示 8 个点
+        val dotCount = if (pageCount > 8) 8 else pageCount
+        // 当超过 8 个时，第 8 个点（索引 7）作为“当前页”高亮
+        val activeIndex = if (pageCount > 8) currentPage.coerceAtMost(7) else currentPage
+
+        repeat(dotCount) { i ->
+            Box(
+                modifier = Modifier
+                    .animateContentSize(spring(dampingRatio = Spring.DampingRatioMediumBouncy))
+                    .size(
+                        width = if (i == activeIndex) 24.dp else 8.dp,
+                        height = 8.dp
+                    )
+                    .clip(CircleShape)
+                    .background(
+                        if (i == activeIndex) Color(0xFF6C63FF) 
+                        else Color.White.copy(0.3f)
+                    )
+            )
         }
-        if (pageCount > 8) Text("${currentPage + 1}/$pageCount", fontSize = 11.sp, color = Color.White.copy(0.5f))
+
+        // 超过 8 个笔记时显示「当前/总数」
+        if (pageCount > 8) {
+            Text(
+                "${currentPage + 1}/$pageCount",
+                fontSize = 11.sp,
+                color = Color.White.copy(0.5f)
+            )
+        }
     }
 }
+
+// @Composable
+// fun PageIndicator(currentPage: Int, pageCount: Int, modifier: Modifier = Modifier) {
+//     Row(modifier = modifier, horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
+//         repeat(pageCount.coerceAtMost(8)) { i ->
+//             Box(modifier = Modifier.animateContentSize(spring(dampingRatio = Spring.DampingRatioMediumBouncy))
+//                 .size(width = if (i == currentPage) 24.dp else 8.dp, height = 8.dp).clip(CircleShape)
+//                 .background(if (i == currentPage) Color(0xFF6C63FF) else Color.White.copy(0.3f)))
+//         }
+//         if (pageCount > 8) Text("${currentPage + 1}/$pageCount", fontSize = 11.sp, color = Color.White.copy(0.5f))
+//     }
+// }
 
 // ═══════════════════════════════════════
 // 空状态
