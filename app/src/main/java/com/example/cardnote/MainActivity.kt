@@ -444,7 +444,7 @@ fun FilterHeader(
 
     Surface(color = Color(0xFF1A1A24), shadowElevation = 8.dp) {
         Column(modifier = Modifier.fillMaxWidth()) {
-            Row(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 12.dp),
+            Row(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 0.dp).padding(top = 12.dp, bottom = 6.dp),
                 verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
 
                 // 左侧：汉堡菜单按钮（打开分类抽屉）
@@ -615,7 +615,7 @@ fun NoteCard(
     val catColor = catEntry?.let { parseColor(it.entity.colorHex) } ?: Color(0xFF6C63FF)
 
     Card(
-        modifier = Modifier.fillMaxWidth().fillMaxHeight(0.92f)
+        modifier = Modifier.fillMaxWidth().fillMaxHeight(0.90f)
             .graphicsLayer { scaleX = scale; scaleY = scale; alpha = 1f - (abs(pageOffset) * 0.3f).coerceIn(0f, 0.3f) }
             .shadow(24.dp, RoundedCornerShape(24.dp),
                 ambientColor = Color(0xFF6C63FF).copy(0.3f), spotColor = Color(0xFF6C63FF).copy(0.4f)),
@@ -625,7 +625,7 @@ fun NoteCard(
         Column(modifier = Modifier.fillMaxSize()) {
 
             // ── 图片区域 ──
-            Box(modifier = Modifier.fillMaxWidth().fillMaxHeight(0.65f)
+            Box(modifier = Modifier.fillMaxWidth().fillMaxHeight(0.5f)
                 .clip(RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp))
                 .background(Color(0xFF252535))
                 .pointerInput(note.id) {
