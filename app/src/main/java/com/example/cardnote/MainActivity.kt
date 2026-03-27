@@ -97,6 +97,7 @@ fun CardNoteApp(vm: NoteViewModel = viewModel()) {
 
     // 选中分类名称 + 颜色
     val selectedCatName = remember(uiState.selectedCategoryId, uiState.categoryTree) {
+        @Composable
         fun findName(nodes: List<CategoryNode>, id: Long?): String? {
             if (id == null) return null
             for (n in nodes) { if (n.entity.id == id) return n.entity.name; findName(n.children, id)?.let { return it } }
@@ -105,6 +106,7 @@ fun CardNoteApp(vm: NoteViewModel = viewModel()) {
         findName(uiState.categoryTree, uiState.selectedCategoryId)
     }
     val selectedCatColor = remember(uiState.selectedCategoryId, uiState.categoryTree) {
+        @Composable
         fun findColor(nodes: List<CategoryNode>, id: Long?): String? {
             if (id == null) return null
             for (n in nodes) { if (n.entity.id == id) return n.entity.colorHex; findColor(n.children, id)?.let { return it } }
@@ -366,6 +368,7 @@ fun CategoryItem(
 }
 
 // 颜色解析工具（#RRGGBB → Color）
+@Composable
 fun parseColor(hex: String): Color {
     return try {
         val c = hex.trimStart('#')
@@ -603,6 +606,7 @@ fun NoteCard(
 
     // 分类名称 + 颜色
     val catEntry = remember(note.categoryId, categoryTree) {
+        @Composable
         fun find(nodes: List<CategoryNode>, id: Long?): CategoryNode? {
             if (id == null) return null
             for (n in nodes) { if (n.entity.id == id) return n; find(n.children, id)?.let { return it } }
