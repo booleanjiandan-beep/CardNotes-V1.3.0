@@ -118,17 +118,17 @@ class NoteViewModel(application: Application) : AndroidViewModel(application) {
     fun closeCategoryDrawer() {
         _uiState.update { it.copy(isCategoryDrawerOpen = false) }
     }
-    fun addCategory(name: String, parentId: Long?) {
+    fun addCategory(name: String, parentId: Long?, colorHex: String = "#6C63FF") {
         viewModelScope.launch {
             if (parentId != null && !catRepo.canAddChild(parentId)) {
                 _uiState.update { it.copy(snackbarMessage = "最多支持三级分类") }
                 return@launch
             }
-            catRepo.insert(CategoryEntity(name = name.trim(), parentId = parentId))
+            catRepo.insert(CategoryEntity(name = name.trim(), parentId = parentId, colorHex = colorHex))
         }
     }
-    fun renameCategory(cat: CategoryEntity, newName: String) {
-        viewModelScope.launch { catRepo.update(cat.copy(name = newName.trim())) }
+    fun renameCategory(cat: CategoryEntity, newName: String, newColor: String = cat.colorHex) {
+        viewModelScope.launch { catRepo.update(cat.copy(name = newName.trim(), colorHex = newColor)) }
     }
     fun deleteCategory(cat: CategoryEntity) {
         viewModelScope.launch {
