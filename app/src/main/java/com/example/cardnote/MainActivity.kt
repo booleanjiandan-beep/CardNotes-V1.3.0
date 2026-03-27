@@ -845,47 +845,167 @@ fun NoteCard(
 // ═══════════════════════════════════════
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
-fun FullscreenImageDialog(images: List<String>, startIndex: Int, onDismiss: () -> Unit) {
+fun FullscreenImageDialog(
+    images: List<String>,
+    startIndex: Int,
+    onDismiss: () -> Unit
+) {
     val context = LocalContext.current
-    val pager = rememberPagerState(initialPage = startIndex, pageCount = { images.size })
+    val pager = rememberPagerState(
+        initialPage = startIndex,
+        pageCount = { images.size }
+    )
 
-    Dialog(onDismissRequest = onDismiss,
-        properties = DialogProperties(usePlatformDefaultWidth = false, dismissOnBackPress = true, dismissOnClickOutside = true)) {
-        Box(modifier = Modifier.fillMaxSize().background(Color.Black)
-            .pointerInput(Unit) { detectTapGestures(onTap = { onDismiss() }) }) {
+    Dialog(
+        onDismissRequest = onDismiss,
+        properties = DialogProperties(
+            usePlatformDefaultWidth = false,
+            dismissOnBackPress = true,
+            dismissOnClickOutside = true
+        )
+    ) {
 
-            HorizontalPager(state = pager, modifier = Modifier.fillMaxSize()) { i ->
+        // 👉 整体背景（点击关闭）
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(Color.Black)
+                .combinedClickable(
+                    indication = null,
+                    interactionSource = remember { MutableInteractionSource() },
+                    onClick = { onDismiss() } // 单击关闭
+                )
+        ) {
+
+            // 👉 图片 Pager
+            HorizontalPager(
+                state = pager,
+                modifier = Modifier.fillMaxSize()
+            ) { i ->
+
                 val path = images[i]
-                AsyncImage(model = ImageRequest.Builder(context)
-                    .data(if (path.startsWith("/")) File(path) else Uri.parse(path)).crossfade(true).build(),
-                    contentDescription = null,
-                    modifier = Modifier.fillMaxSize().pointerInput(Unit) { detectTapGestures() }, // 消费点击防止穿透关闭
-                    contentScale = ContentScale.Fit)
-            }
 
-            // 关闭按钮
-            IconButton(onClick = onDismiss,
-                modifier = Modifier.align(Alignment.TopEnd).padding(16.dp)
-                    .size(36.dp).clip(CircleShape).background(Color.Black.copy(0.5f))) {
-                Icon(Icons.Default.Close, "关闭", tint = Color.White)
-            }
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        // ⚠️ 关键：拦截点击，防止传递给外层关闭
+                        .combinedClickable(
+                            indication = null,
+                            interactionSource = remember { MutableInteractionSource() },
 
-            // 页码
-            if (images.size > 1) {
-                Box(modifier = Modifier.align(Alignment.BottomCenter).padding(bottom = 32.dp)
-                    .clip(RoundedCornerShape(16.dp)).background(Color.Black.copy(0.5f))
-                    .padding(horizontal = 12.dp, vertical = 6.dp)) {
-                    Text("${pager.currentPage + 1} / ${images.size}", color = Color.White, fontSize = 13.sp)
+                            onClick = {
+                                // 单击图片 👉 不关闭（拦截）
+                            },
+
+                            onDoubleClick = {
+                                // 👉 这里可以扩展：双击缩放
+                                // 目前先留空（你后续可以加 scale）
+                            }
+                        )
+                ) {
+                    AsyncImage(
+                        model = ImageRequest.Builder(context)
+                            .data(if (path.startsWith("/")) File(path) else Uri.parse(path))
+                            .crossfade(true)
+                            .build(),
+                        contentDescription = null,
+                        modifier = Modifier.fillMaxSize(),
+                        contentScale = ContentScale.Fit
+                    )
                 }
             }
 
-            // 提示
-            Box(modifier = Modifier.align(Alignment.BottomCenter).padding(bottom = 14.dp)) {
-                Text("点击任意处关闭", color = Color.White.copy(0.45f), fontSize = 11.sp)
+            // 👉 关闭按钮
+            IconButton(
+                onClick = onDismiss,
+                modifier = Modifier
+                    .align(Alignment.TopEnd)
+                    .padding(16.dp)
+                    .size(36.dp)
+                    .clip(CircleShape)
+                    .background(Color.Black.copy(0.5f))
+            ) {
+                Icon(Icons.Default.Close, "关闭", tint = Color.White)
+            }
+
+            // 👉 页码
+            if (images.size > 1) {
+                Box(
+                    modifier = Modifier
+                        .align(Alignment.BottomCenter)
+                        .padding(bottom = 32.dp)
+                        .clip(RoundedCornerShape(16.dp))
+                        .background(Color.Black.copy(0.5f))
+                        .padding(horizontal = 12.dp, vertical = 6.dp)
+                ) {
+                    Text(
+                        "${pager.currentPage + 1} / ${images.size}",
+                        color = Color.White,
+                        fontSize = 13.sp
+                    )
+                }
+            }
+
+            // 👉 提示
+            Box(
+                modifier = Modifier
+                    .align(Alignment.BottomCenter)
+                    .padding(bottom = 14.dp)
+            ) {
+                Text(
+                    "点击空白处关闭",
+                    color = Color.White.copy(0.45f),
+                    fontSize = 11.sp
+                )
             }
         }
     }
 }
+
+
+// @OptIn(ExperimentalFoundationApi::class)
+// @Composable
+// fun FullscreenImageDialog(images: List<String>, startIndex: Int, onDismiss: () -> Unit) {
+//     val context = LocalContext.current
+//     val pager = rememberPagerState(initialPage = startIndex, pageCount = { images.size })
+
+//     Dialog(onDismissRequest = onDismiss,
+//         properties = DialogProperties(usePlatformDefaultWidth = false, dismissOnBackPress = true, dismissOnClickOutside = true)) {
+//         Box(modifier = Modifier.fillMaxSize().background(Color.Black)
+//             .pointerInput(Unit) { detectTapGestures(onTap = { onDismiss() }) }) {
+
+//             HorizontalPager(state = pager, modifier = Modifier.fillMaxSize()) { i ->
+//                 val path = images[i]
+//                 AsyncImage(model = ImageRequest.Builder(context)
+//                     .data(if (path.startsWith("/")) File(path) else Uri.parse(path)).crossfade(true).build(),
+//                     contentDescription = null,
+//                     modifier = Modifier.fillMaxSize().pointerInput(Unit) { detectTapGestures() }, // 消费点击防止穿透关闭
+//                     contentScale = ContentScale.Fit)
+//             }
+
+//             // 关闭按钮
+//             IconButton(onClick = onDismiss,
+//                 modifier = Modifier.align(Alignment.TopEnd).padding(16.dp)
+//                     .size(36.dp).clip(CircleShape).background(Color.Black.copy(0.5f))) {
+//                 Icon(Icons.Default.Close, "关闭", tint = Color.White)
+//             }
+
+//             // 页码
+//             if (images.size > 1) {
+//                 Box(modifier = Modifier.align(Alignment.BottomCenter).padding(bottom = 32.dp)
+//                     .clip(RoundedCornerShape(16.dp)).background(Color.Black.copy(0.5f))
+//                     .padding(horizontal = 12.dp, vertical = 6.dp)) {
+//                     Text("${pager.currentPage + 1} / ${images.size}", color = Color.White, fontSize = 13.sp)
+//                 }
+//             }
+
+//             // 提示
+//             Box(modifier = Modifier.align(Alignment.BottomCenter).padding(bottom = 14.dp)) {
+//                 Text("点击任意处关闭", color = Color.White.copy(0.45f), fontSize = 11.sp)
+//             }
+//         }
+//     }
+// }
 
 // ═══════════════════════════════════════
 // 新增 / 编辑 BottomSheet
