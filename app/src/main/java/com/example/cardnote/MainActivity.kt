@@ -457,7 +457,7 @@ fun FilterHeader(
                 // 标题 / 搜索框区域 — 固定高度 40dp，防止搜索框撑高整行
                 Box(modifier = Modifier.weight(1f).height(40.dp)) {
                     // 标题（非搜索状态）
-                    AnimatedVisibility(!isSearchActive, modifier = Modifier.fillMaxSize(),
+                    androidx.compose.animation.AnimatedVisibility(!isSearchActive, modifier = Modifier.fillMaxSize(),
                         enter = fadeIn(), exit = fadeOut()) {
                         Column(modifier = Modifier.fillMaxHeight(), verticalArrangement = Arrangement.Center) {
                             Text("卡片笔记", fontSize = 18.sp, fontWeight = FontWeight.Bold, color = Color.White, maxLines = 1)
@@ -468,7 +468,7 @@ fun FilterHeader(
                         }
                     }
                     // 搜索框（搜索状态）— 强制固定高度，不随内容撑大
-                    AnimatedVisibility(isSearchActive, modifier = Modifier.fillMaxSize(),
+                    androidx.compose.animation.AnimatedVisibility(isSearchActive, modifier = Modifier.fillMaxSize(),
                         enter = fadeIn(), exit = fadeOut()) {
                         BasicTextField(
                             value = searchQuery,
