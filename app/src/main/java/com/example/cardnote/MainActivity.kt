@@ -22,7 +22,7 @@ import androidx.compose.foundation.pager.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
@@ -95,7 +95,7 @@ fun CardNoteApp(vm: NoteViewModel = viewModel()) {
     // 抽屉关闭时 back 键
     BackHandler(uiState.isCategoryDrawerOpen) { vm.closeCategoryDrawer() }
 
-    // 选中分类名称
+    // 选中分类名称 + 颜色
     val selectedCatName = remember(uiState.selectedCategoryId, uiState.categoryTree) {
         fun findName(nodes: List<CategoryNode>, id: Long?): String? {
             if (id == null) return null
@@ -103,6 +103,14 @@ fun CardNoteApp(vm: NoteViewModel = viewModel()) {
             return null
         }
         findName(uiState.categoryTree, uiState.selectedCategoryId)
+    }
+    val selectedCatColor = remember(uiState.selectedCategoryId, uiState.categoryTree) {
+        fun findColor(nodes: List<CategoryNode>, id: Long?): String? {
+            if (id == null) return null
+            for (n in nodes) { if (n.entity.id == id) return n.entity.colorHex; findColor(n.children, id)?.let { return it } }
+            return null
+        }
+        parseColor(findColor(uiState.categoryTree, uiState.selectedCategoryId) ?: "#6C63FF")
     }
 
     Scaffold(
@@ -131,9 +139,9 @@ fun CardNoteApp(vm: NoteViewModel = viewModel()) {
                     tree = uiState.categoryTree,
                     selectedId = uiState.selectedCategoryId,
                     onSelect   = { id -> vm.selectCategory(id); vm.closeCategoryDrawer() },
-                    onAddRoot  = { name -> vm.addCategory(name, null) },
-                    onAddChild = { name, pid -> vm.addCategory(name, pid) },
-                    onRename   = { cat, name -> vm.renameCategory(cat, name) },
+                    onAddRoot  = { name, color -> vm.addCategory(name, null, color) },
+                    onAddChild = { name, pid, color -> vm.addCategory(name, pid, color) },
+                    onRename   = { cat, name, color -> vm.renameCategory(cat, name, color) },
                     onDelete   = { cat -> vm.deleteCategory(cat) },
                     onClose    = { vm.closeCategoryDrawer() }
                 )
@@ -144,6 +152,7 @@ fun CardNoteApp(vm: NoteViewModel = viewModel()) {
                     filterState = filterState, totalCount = notes.size,
                     searchQuery = uiState.searchQuery, isSearchActive = uiState.isSearchActive,
                     selectedCatName = selectedCatName,
+                    selectedCatColor = selectedCatColor,
                     onOpenDrawer           = { vm.toggleCategoryDrawer() },
                     onToggleDownloaded     = { vm.toggleDownloadedFilter() },
                     onToggleNotDownloaded  = { vm.toggleNotDownloadedFilter() },
@@ -202,9 +211,9 @@ fun CardNoteApp(vm: NoteViewModel = viewModel()) {
 fun CategoryDrawer(
     tree: List<CategoryNode>, selectedId: Long?,
     onSelect: (Long?) -> Unit,
-    onAddRoot: (String) -> Unit,
-    onAddChild: (String, Long) -> Unit,
-    onRename: (CategoryEntity, String) -> Unit,
+    onAddRoot: (name: String, color: String) -> Unit,
+    onAddChild: (name: String, parentId: Long, color: String) -> Unit,
+    onRename: (cat: CategoryEntity, newName: String, newColor: String) -> Unit,
     onDelete: (CategoryEntity) -> Unit,
     onClose: () -> Unit
 ) {
@@ -213,7 +222,6 @@ fun CategoryDrawer(
     Surface(modifier = Modifier.fillMaxHeight().width(280.dp), color = Color(0xFF13131E),
         shadowElevation = 16.dp) {
         Column(modifier = Modifier.fillMaxSize()) {
-            // 标题行
             Row(modifier = Modifier.fillMaxWidth().padding(16.dp),
                 verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween) {
                 Text("分类", fontSize = 18.sp, fontWeight = FontWeight.Bold, color = Color.White)
@@ -227,22 +235,22 @@ fun CategoryDrawer(
                 }
             }
             Divider(color = Color(0xFF2A2A38))
-
             Column(modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(vertical = 8.dp)) {
-                // "全部" 入口
-                CategoryItem(label = "全部笔记", icon = Icons.Default.LibraryBooks,
+                CategoryItem(label = "全部笔记", icon = Icons.Default.LibraryBooks, accentColor = Color(0xFF6C63FF),
                     selected = selectedId == null, depth = 0, isFolder = false,
                     onSelect = { onSelect(null) }, canAddChild = false,
                     onAddChild = {}, onRename = {}, onDelete = {})
                 Divider(color = Color(0xFF1E1E2E), modifier = Modifier.padding(vertical = 4.dp))
-                // 分类树
-                tree.forEach { node -> CategoryNodeItem(node, selectedId, onSelect, onAddChild, onRename, onDelete) }
+                tree.forEach { node ->
+                    CategoryNodeItem(node, selectedId, onSelect, onAddChild, onRename, onDelete)
+                }
             }
         }
     }
 
     if (showAddRoot) {
-        CategoryNameDialog(title = "新建顶级分类", onConfirm = { name -> onAddRoot(name); showAddRoot = false },
+        CategoryNameDialog(title = "新建顶级分类",
+            onConfirm = { name, color -> onAddRoot(name, color); showAddRoot = false },
             onDismiss = { showAddRoot = false })
     }
 }
@@ -251,17 +259,20 @@ fun CategoryDrawer(
 fun CategoryNodeItem(
     node: CategoryNode, selectedId: Long?,
     onSelect: (Long?) -> Unit,
-    onAddChild: (String, Long) -> Unit,
-    onRename: (CategoryEntity, String) -> Unit,
+    onAddChild: (name: String, parentId: Long, color: String) -> Unit,
+    onRename: (cat: CategoryEntity, newName: String, newColor: String) -> Unit,
     onDelete: (CategoryEntity) -> Unit
 ) {
     var showAddChild by remember { mutableStateOf(false) }
     var showRename   by remember { mutableStateOf(false) }
     var expanded     by remember { mutableStateOf(true) }
-    val canAddChild  = node.depth < 2   // depth 0,1 可以再加子 → 最多到 depth=2（三级）
+    val canAddChild  = node.depth < 2
+    val accentColor  = parseColor(node.entity.colorHex)
 
     CategoryItem(
-        label = node.entity.name, icon = if (node.children.isEmpty()) Icons.Default.Label else Icons.Default.Folder,
+        label = node.entity.name,
+        icon = if (node.children.isEmpty()) Icons.Default.Label else Icons.Default.Folder,
+        accentColor = accentColor,
         selected = selectedId == node.entity.id, depth = node.depth,
         isFolder = node.children.isNotEmpty(),
         expanded = expanded, onToggleExpand = { expanded = !expanded },
@@ -282,12 +293,13 @@ fun CategoryNodeItem(
 
     if (showAddChild) {
         CategoryNameDialog(title = "在「${node.entity.name}」下新建分类",
-            onConfirm = { name -> onAddChild(name, node.entity.id); showAddChild = false },
+            onConfirm = { name, color -> onAddChild(name, node.entity.id, color); showAddChild = false },
             onDismiss = { showAddChild = false })
     }
     if (showRename) {
-        CategoryNameDialog(title = "重命名", initial = node.entity.name,
-            onConfirm = { name -> onRename(node.entity, name); showRename = false },
+        CategoryNameDialog(title = "重命名「${node.entity.name}」", initial = node.entity.name,
+            initialColor = node.entity.colorHex,
+            onConfirm = { name, color -> onRename(node.entity, name, color); showRename = false },
             onDismiss = { showRename = false })
     }
 }
@@ -295,6 +307,7 @@ fun CategoryNodeItem(
 @Composable
 fun CategoryItem(
     label: String, icon: androidx.compose.ui.graphics.vector.ImageVector,
+    accentColor: Color = Color(0xFF6C63FF),
     selected: Boolean, depth: Int, isFolder: Boolean,
     expanded: Boolean = false, onToggleExpand: () -> Unit = {},
     onSelect: () -> Unit, canAddChild: Boolean,
@@ -308,25 +321,25 @@ fun CategoryItem(
             .fillMaxWidth()
             .padding(start = 12.dp + indentDp, end = 4.dp, top = 2.dp, bottom = 2.dp)
             .clip(RoundedCornerShape(10.dp))
-            .background(if (selected) Color(0xFF6C63FF).copy(alpha = 0.18f) else Color.Transparent)
+            .background(if (selected) accentColor.copy(alpha = 0.18f) else Color.Transparent)
             .clickable { onSelect() }
             .padding(horizontal = 10.dp, vertical = 10.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(8.dp)
     ) {
-        // 展开/折叠箭头
         if (isFolder) {
             Icon(if (expanded) Icons.Default.ExpandMore else Icons.Default.ChevronRight, null,
                 tint = Color(0xFF8888AA), modifier = Modifier.size(16.dp).clickable { onToggleExpand() })
         } else {
             Spacer(modifier = Modifier.size(16.dp))
         }
-        Icon(icon, null, tint = if (selected) Color(0xFF6C63FF) else Color(0xFF8888AA), modifier = Modifier.size(16.dp))
+        // 彩色圆点标记
+        Box(modifier = Modifier.size(8.dp).clip(CircleShape).background(accentColor))
+        Icon(icon, null, tint = if (selected) accentColor else Color(0xFF8888AA), modifier = Modifier.size(16.dp))
         Text(label, fontSize = 14.sp, color = if (selected) Color.White else Color(0xFFCCCCDD),
             fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Normal,
             modifier = Modifier.weight(1f), maxLines = 1, overflow = TextOverflow.Ellipsis)
 
-        // 更多操作菜单（非「全部」条目）
         if (onRename != {}) {
             Box {
                 IconButton(onClick = { showMenu = true }, modifier = Modifier.size(24.dp)) {
@@ -336,7 +349,7 @@ fun CategoryItem(
                     modifier = Modifier.background(Color(0xFF252535))) {
                     if (canAddChild) DropdownMenuItem(
                         text = { Text("新建子分类", color = Color.White, fontSize = 13.sp) },
-                        leadingIcon = { Icon(Icons.Default.CreateNewFolder, null, tint = Color(0xFF6C63FF), modifier = Modifier.size(16.dp)) },
+                        leadingIcon = { Icon(Icons.Default.CreateNewFolder, null, tint = accentColor, modifier = Modifier.size(16.dp)) },
                         onClick = { showMenu = false; onAddChild() })
                     DropdownMenuItem(
                         text = { Text("重命名", color = Color.White, fontSize = 13.sp) },
@@ -352,23 +365,60 @@ fun CategoryItem(
     }
 }
 
+// 颜色解析工具（#RRGGBB → Color）
+fun parseColor(hex: String): Color {
+    return try {
+        val c = hex.trimStart('#')
+        val r = c.substring(0, 2).toInt(16)
+        val g = c.substring(2, 4).toInt(16)
+        val b = c.substring(4, 6).toInt(16)
+        Color(r, g, b)
+    } catch (_: Exception) { Color(0xFF6C63FF) }
+}
+
+// 预设颜色盘
+private val PRESET_COLORS = listOf(
+    "#6C63FF", "#FF6B6B", "#34D399", "#FB923C", "#60A5FA",
+    "#F472B6", "#FBBF24", "#A78BFA", "#2DD4BF", "#F87171"
+)
+
 @Composable
-fun CategoryNameDialog(title: String, initial: String = "", onConfirm: (String) -> Unit, onDismiss: () -> Unit) {
-    var text by remember { mutableStateOf(initial) }
+fun CategoryNameDialog(
+    title: String, initial: String = "", initialColor: String = "#6C63FF",
+    onConfirm: (name: String, color: String) -> Unit, onDismiss: () -> Unit
+) {
+    var text  by remember { mutableStateOf(initial) }
+    var color by remember { mutableStateOf(initialColor) }
     AlertDialog(onDismissRequest = onDismiss, containerColor = Color(0xFF1E1E2E), shape = RoundedCornerShape(16.dp),
         title = { Text(title, color = Color.White, fontWeight = FontWeight.Bold) },
         text = {
-            OutlinedTextField(value = text, onValueChange = { text = it },
-                placeholder = { Text("分类名称", color = Color(0xFF555566)) },
-                singleLine = true, shape = RoundedCornerShape(10.dp),
-                colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = Color(0xFF6C63FF),
-                    unfocusedBorderColor = Color(0xFF3A3A55), focusedTextColor = Color.White,
-                    unfocusedTextColor = Color.White, cursorColor = Color(0xFF6C63FF),
-                    focusedContainerColor = Color(0xFF252535), unfocusedContainerColor = Color(0xFF252535)))
+            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                OutlinedTextField(value = text, onValueChange = { text = it },
+                    placeholder = { Text("分类名称", color = Color(0xFF555566)) },
+                    singleLine = true, shape = RoundedCornerShape(10.dp),
+                    colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = parseColor(color),
+                        unfocusedBorderColor = Color(0xFF3A3A55), focusedTextColor = Color.White,
+                        unfocusedTextColor = Color.White, cursorColor = parseColor(color),
+                        focusedContainerColor = Color(0xFF252535), unfocusedContainerColor = Color(0xFF252535)))
+                // 颜色选择
+                Text("标签颜色", fontSize = 12.sp, color = Color(0xFF8888AA))
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
+                    PRESET_COLORS.forEach { hex ->
+                        val c = parseColor(hex)
+                        Box(modifier = Modifier
+                            .size(28.dp).clip(CircleShape).background(c)
+                            .border(if (color == hex) 2.dp else 0.dp, Color.White, CircleShape)
+                            .clickable { color = hex },
+                            contentAlignment = Alignment.Center) {
+                            if (color == hex) Icon(Icons.Default.Check, null, tint = Color.White, modifier = Modifier.size(14.dp))
+                        }
+                    }
+                }
+            }
         },
         confirmButton = {
-            Button(onClick = { if (text.isNotBlank()) onConfirm(text.trim()) },
-                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF6C63FF)),
+            Button(onClick = { if (text.isNotBlank()) onConfirm(text.trim(), color) },
+                colors = ButtonDefaults.buttonColors(containerColor = parseColor(color)),
                 shape = RoundedCornerShape(10.dp)) { Text("确定") }
         },
         dismissButton = { TextButton(onClick = onDismiss) { Text("取消", color = Color(0xFF8888AA)) } }
@@ -382,6 +432,7 @@ fun CategoryNameDialog(title: String, initial: String = "", onConfirm: (String) 
 fun FilterHeader(
     filterState: FilterState, totalCount: Int, searchQuery: String, isSearchActive: Boolean,
     selectedCatName: String?,
+    selectedCatColor: Color = Color(0xFF6C63FF),
     onOpenDrawer: () -> Unit,
     onToggleDownloaded: () -> Unit, onToggleNotDownloaded: () -> Unit,
     onToggleSearch: () -> Unit, onSearchQueryChange: (String) -> Unit, onClearSearch: () -> Unit
@@ -395,103 +446,64 @@ fun FilterHeader(
             Row(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 12.dp),
                 verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
 
-                // 分类入口按钮
+                // 左侧：汉堡菜单按钮（打开分类抽屉）
                 IconButton(onClick = onOpenDrawer,
                     modifier = Modifier.clip(RoundedCornerShape(10.dp))
-                        .background(if (selectedCatName != null) Color(0xFF6C63FF).copy(0.2f) else Color(0xFF2A2A38))) {
-                    Icon(Icons.Default.AccountTree, "分类",
-                        tint = if (selectedCatName != null) Color(0xFF6C63FF) else Color(0xFF8888AA))
+                        .background(if (selectedCatName != null) selectedCatColor.copy(0.2f) else Color(0xFF2A2A38))) {
+                    Icon(Icons.Default.Menu, "分类",
+                        tint = if (selectedCatName != null) selectedCatColor else Color(0xFF8888AA))
                 }
 
-                // 标题 or 搜索框
-
-                // AnimatedVisibility(!isSearchActive, modifier = Modifier.weight(1f),
-                //     enter = fadeIn() + expandHorizontally(), exit = fadeOut() + shrinkHorizontally()) {
-                //     Column {
-                //         Text("卡片笔记", fontSize = 20.sp, fontWeight = FontWeight.Bold, color = Color.White)
-                //         if (selectedCatName != null)
-                //             Text(selectedCatName, fontSize = 11.sp, color = Color(0xFF6C63FF))
-                //         else
-                //             Text("共 $totalCount 条", fontSize = 11.sp, color = Color(0xFF8888AA))
-                //     }
-                // }
-                // AnimatedVisibility(isSearchActive, modifier = Modifier.weight(1f),
-                //     enter = fadeIn() + expandHorizontally(), exit = fadeOut() + shrinkHorizontally()) {
-                //     OutlinedTextField(value = searchQuery, onValueChange = onSearchQueryChange,
-                //         modifier = Modifier.fillMaxWidth().focusRequester(focusReq),
-                //         placeholder = { Text("搜索名称、URL、备注…", color = Color(0xFF5555AA), fontSize = 13.sp) },
-                //         singleLine = true, shape = RoundedCornerShape(12.dp),
-                //         colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = Color(0xFF6C63FF),
-                //             unfocusedBorderColor = Color(0xFF3A3A55), focusedTextColor = Color.White,
-                //             unfocusedTextColor = Color.White, cursorColor = Color(0xFF6C63FF),
-                //             focusedContainerColor = Color(0xFF252535), unfocusedContainerColor = Color(0xFF252535)),
-                //         leadingIcon = { Icon(Icons.Default.Search, null, tint = Color(0xFF6C63FF), modifier = Modifier.size(16.dp)) },
-                //         trailingIcon = { if (searchQuery.isNotEmpty()) IconButton(onClick = { onSearchQueryChange("") }) { Icon(Icons.Default.Close, null, tint = Color(0xFF8888AA), modifier = Modifier.size(14.dp)) } },
-                //         textStyle = androidx.compose.ui.text.TextStyle(fontSize = 13.sp))
-                // }
-
-                
-                // ==================== 【替换成这段】 ====================
-                AnimatedContent(
-                    targetState = isSearchActive,
-                    modifier = Modifier.weight(1f),
-                    transitionSpec = {
-                        fadeIn(animationSpec = tween(220)) + 
-                        expandVertically(animationSpec = tween(220)) togetherWith 
-                        fadeOut(animationSpec = tween(220)) + 
-                        shrinkVertically(animationSpec = tween(220))
-                    }
-                ) { isSearching ->
-                    if (!isSearching) {
-                        // 非搜索状态：标题 + 副标题
-                        Column {
-                            Text(
-                                "卡片笔记",
-                                fontSize = 20.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = Color.White
-                            )
-                            if (selectedCatName != null) {
-                                Text(selectedCatName, fontSize = 11.sp, color = Color(0xFF6C63FF))
-                            } else {
-                                Text("共 $totalCount 条", fontSize = 11.sp, color = Color(0xFF8888AA))
-                            }
+                // 标题 / 搜索框区域 — 固定高度 40dp，防止搜索框撑高整行
+                Box(modifier = Modifier.weight(1f).height(40.dp)) {
+                    // 标题（非搜索状态）
+                    AnimatedVisibility(!isSearchActive, modifier = Modifier.fillMaxSize(),
+                        enter = fadeIn(), exit = fadeOut()) {
+                        Column(modifier = Modifier.fillMaxHeight(), verticalArrangement = Arrangement.Center) {
+                            Text("卡片笔记", fontSize = 18.sp, fontWeight = FontWeight.Bold, color = Color.White, maxLines = 1)
+                            if (selectedCatName != null)
+                                Text(selectedCatName, fontSize = 10.sp, color = Color(0xFF6C63FF), maxLines = 1)
+                            else
+                                Text("共 $totalCount 条", fontSize = 10.sp, color = Color(0xFF8888AA), maxLines = 1)
                         }
-                    } else {
-                        // 搜索状态：搜索框
-                        OutlinedTextField(
+                    }
+                    // 搜索框（搜索状态）— 强制固定高度，不随内容撑大
+                    AnimatedVisibility(isSearchActive, modifier = Modifier.fillMaxSize(),
+                        enter = fadeIn(), exit = fadeOut()) {
+                        BasicTextField(
                             value = searchQuery,
                             onValueChange = onSearchQueryChange,
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .focusRequester(focusReq),
-                            placeholder = { Text("搜索名称、URL、备注…", color = Color(0xFF5555AA), fontSize = 13.sp) },
+                            modifier = Modifier.fillMaxSize().focusRequester(focusReq),
                             singleLine = true,
-                            shape = RoundedCornerShape(12.dp),
-                            colors = OutlinedTextFieldDefaults.colors(
-                                focusedBorderColor = Color(0xFF6C63FF),
-                                unfocusedBorderColor = Color(0xFF3A3A55),
-                                focusedTextColor = Color.White,
-                                unfocusedTextColor = Color.White,
-                                cursorColor = Color(0xFF6C63FF),
-                                focusedContainerColor = Color(0xFF252535),
-                                unfocusedContainerColor = Color(0xFF252535)
+                            textStyle = androidx.compose.ui.text.TextStyle(
+                                color = Color.White, fontSize = 13.sp,
+                                lineHeight = 13.sp
                             ),
-                            leadingIcon = {
-                                Icon(Icons.Default.Search, null, tint = Color(0xFF6C63FF), modifier = Modifier.size(16.dp))
-                            },
-                            trailingIcon = {
-                                if (searchQuery.isNotEmpty()) {
-                                    IconButton(onClick = { onSearchQueryChange("") }) {
-                                        Icon(Icons.Default.Close, null, tint = Color(0xFF8888AA), modifier = Modifier.size(14.dp))
+                            decorationBox = { innerTextField ->
+                                Row(
+                                    modifier = Modifier.fillMaxSize()
+                                        .clip(RoundedCornerShape(10.dp))
+                                        .background(Color(0xFF252535))
+                                        .border(1.dp, Color(0xFF6C63FF), RoundedCornerShape(10.dp))
+                                        .padding(horizontal = 10.dp),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                                ) {
+                                    Icon(Icons.Default.Search, null, tint = Color(0xFF6C63FF), modifier = Modifier.size(14.dp))
+                                    Box(modifier = Modifier.weight(1f)) {
+                                        if (searchQuery.isEmpty()) Text("搜索…", color = Color(0xFF5555AA), fontSize = 13.sp, maxLines = 1)
+                                        innerTextField()
+                                    }
+                                    if (searchQuery.isNotEmpty()) {
+                                        Icon(Icons.Default.Close, null, tint = Color(0xFF8888AA),
+                                            modifier = Modifier.size(14.dp).clickable { onSearchQueryChange("") })
                                     }
                                 }
-                            },
-                            textStyle = androidx.compose.ui.text.TextStyle(fontSize = 13.sp)
+                            }
                         )
                     }
                 }
-                // ==================== 替换结束 ====================
+
                 // 搜索图标
                 IconButton(onClick = onToggleSearch,
                     modifier = Modifier.clip(RoundedCornerShape(10.dp))
@@ -500,12 +512,12 @@ fun FilterHeader(
                         tint = if (isSearchActive || searchQuery.isNotEmpty()) Color(0xFF6C63FF) else Color(0xFF8888AA))
                 }
 
-                // 筛选图标
+                // 右侧：三个点菜单（筛选）
                 Box {
                     IconButton(onClick = { menuExpanded = !menuExpanded },
                         modifier = Modifier.clip(RoundedCornerShape(10.dp))
                             .background(if (!filterState.showAll) Color(0xFF6C63FF).copy(0.2f) else Color(0xFF2A2A38))) {
-                        Icon(Icons.Default.FilterList, "筛选",
+                        Icon(Icons.Default.MoreVert, "筛选",
                             tint = if (!filterState.showAll) Color(0xFF6C63FF) else Color(0xFF8888AA))
                     }
                     DropdownMenu(expanded = menuExpanded, onDismissRequest = { menuExpanded = false },
@@ -521,12 +533,12 @@ fun FilterHeader(
             // 状态指示条
             val showBanner = searchQuery.isNotEmpty() || !filterState.showAll || selectedCatName != null
             AnimatedVisibility(visible = showBanner) {
-                Row(modifier = Modifier.fillMaxWidth().background(Color(0xFF6C63FF).copy(0.08f)).padding(horizontal = 16.dp, vertical = 6.dp),
+                Row(modifier = Modifier.fillMaxWidth().background(selectedCatColor.copy(0.07f)).padding(horizontal = 16.dp, vertical = 6.dp),
                     verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                     selectedCatName?.let {
-                        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(3.dp)) {
-                            Icon(Icons.Default.Folder, null, tint = Color(0xFF6C63FF), modifier = Modifier.size(12.dp))
-                            Text(it, fontSize = 11.sp, color = Color(0xFF6C63FF), fontWeight = FontWeight.Medium)
+                        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                            Box(modifier = Modifier.size(7.dp).clip(CircleShape).background(selectedCatColor))
+                            Text(it, fontSize = 11.sp, color = selectedCatColor, fontWeight = FontWeight.Medium)
                         }
                     }
                     if (searchQuery.isNotEmpty()) Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(3.dp)) {
@@ -589,15 +601,17 @@ fun NoteCard(
         else if (imgPager.currentPage >= note.images.size) imgPager.scrollToPage(note.images.size - 1)
     }
 
-    // 分类名称
-    val catName = remember(note.categoryId, categoryTree) {
-        fun find(nodes: List<CategoryNode>, id: Long?): String? {
+    // 分类名称 + 颜色
+    val catEntry = remember(note.categoryId, categoryTree) {
+        fun find(nodes: List<CategoryNode>, id: Long?): CategoryNode? {
             if (id == null) return null
-            for (n in nodes) { if (n.entity.id == id) return n.entity.name; find(n.children, id)?.let { return it } }
+            for (n in nodes) { if (n.entity.id == id) return n; find(n.children, id)?.let { return it } }
             return null
         }
         find(categoryTree, note.categoryId)
     }
+    val catName  = catEntry?.entity?.name
+    val catColor = catEntry?.let { parseColor(it.entity.colorHex) } ?: Color(0xFF6C63FF)
 
     Card(
         modifier = Modifier.fillMaxWidth().fillMaxHeight(0.82f)
@@ -745,12 +759,12 @@ fun NoteCard(
 
             // ── 内容区域 ──
             Column(modifier = Modifier.fillMaxSize().padding(20.dp)) {
-                // 分类标签
+                // 分类标签（彩色）
                 catName?.let {
                     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp),
                         modifier = Modifier.padding(bottom = 6.dp)) {
-                        Icon(Icons.Default.Folder, null, tint = Color(0xFF6C63FF).copy(0.7f), modifier = Modifier.size(12.dp))
-                        Text(it, fontSize = 11.sp, color = Color(0xFF6C63FF).copy(0.85f))
+                        Box(modifier = Modifier.size(7.dp).clip(CircleShape).background(catColor))
+                        Text(it, fontSize = 11.sp, color = catColor)
                     }
                 }
                 HighlightText(note.name, searchQuery, Color.White, 20.sp, 2, FontWeight.Bold)
@@ -1026,7 +1040,6 @@ fun CategoryPickerDialog(tree: List<CategoryNode>, selectedId: Long?, onSelect: 
                     if (selectedId == null) { Spacer(modifier = Modifier.weight(1f)); Icon(Icons.Default.Check, null, tint = Color(0xFF6C63FF), modifier = Modifier.size(16.dp)) }
                 }
                 Divider(color = Color(0xFF2A2A38), modifier = Modifier.padding(vertical = 4.dp))
-                @Composable
                 fun renderNodes(nodes: List<CategoryNode>) {
                     nodes.forEach { node ->
                         Row(modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(8.dp))
