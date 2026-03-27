@@ -65,6 +65,22 @@ import kotlinx.coroutines.launch
 import java.io.File
 import kotlin.math.abs
 
+
+fun parseColor(hex: String): Color {
+    return try {
+        val c = hex.trimStart('#')
+        val r = c.substring(0, 2).toInt(16)
+        val g = c.substring(2, 4).toInt(16)
+        val b = c.substring(4, 6).toInt(16)
+        Color(r, g, b)
+    } catch (_: Exception) { Color(0xFF6C63FF) }
+}
+
+private val PRESET_COLORS = listOf(
+    "#6C63FF", "#FF6B6B", "#34D399", "#FB923C", "#60A5FA",
+    "#F472B6", "#FBBF24", "#A78BFA", "#2DD4BF", "#F87171"
+)
+
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -1028,13 +1044,15 @@ fun NoteBottomSheet(
 // ═══════════════════════════════════════
 // 分类选择弹窗（新增/编辑笔记时使用）
 // ═══════════════════════════════════════
+
+// 在 CategoryPickerDialog 里修复 renderNodes
 @Composable
 fun CategoryPickerDialog(tree: List<CategoryNode>, selectedId: Long?, onSelect: (Long?) -> Unit, onDismiss: () -> Unit) {
     AlertDialog(onDismissRequest = onDismiss, containerColor = Color(0xFF1E1E2E), shape = RoundedCornerShape(16.dp),
         title = { Text("选择分类", color = Color.White, fontWeight = FontWeight.Bold) },
         text = {
             Column(modifier = Modifier.verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                // 未分类选项
+                // 未分类选项（保持不变）
                 Row(modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(8.dp))
                     .background(if (selectedId == null) Color(0xFF6C63FF).copy(0.18f) else Color.Transparent)
                     .clickable { onSelect(null) }.padding(12.dp),
@@ -1044,18 +1062,21 @@ fun CategoryPickerDialog(tree: List<CategoryNode>, selectedId: Long?, onSelect: 
                     if (selectedId == null) { Spacer(modifier = Modifier.weight(1f)); Icon(Icons.Default.Check, null, tint = Color(0xFF6C63FF), modifier = Modifier.size(16.dp)) }
                 }
                 Divider(color = Color(0xFF2A2A38), modifier = Modifier.padding(vertical = 4.dp))
+
+                // 关键修复：加上 @Composable
                 @Composable
                 fun renderNodes(nodes: List<CategoryNode>) {
                     nodes.forEach { node ->
+                        val catColor = parseColor(node.entity.colorHex)
                         Row(modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(8.dp))
-                            .background(if (selectedId == node.entity.id) Color(0xFF6C63FF).copy(0.18f) else Color.Transparent)
+                            .background(if (selectedId == node.entity.id) catColor.copy(0.18f) else Color.Transparent)
                             .clickable { onSelect(node.entity.id) }
                             .padding(start = (12 + node.depth * 18).dp, end = 12.dp, top = 10.dp, bottom = 10.dp),
                             verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                             Icon(if (node.children.isEmpty()) Icons.Default.Label else Icons.Default.Folder, null,
-                                tint = if (selectedId == node.entity.id) Color(0xFF6C63FF) else Color(0xFF8888AA), modifier = Modifier.size(15.dp))
+                                tint = if (selectedId == node.entity.id) catColor else Color(0xFF8888AA), modifier = Modifier.size(15.dp))
                             Text(node.entity.name, color = if (selectedId == node.entity.id) Color.White else Color(0xFFBBBBCC), fontSize = 14.sp, modifier = Modifier.weight(1f))
-                            if (selectedId == node.entity.id) Icon(Icons.Default.Check, null, tint = Color(0xFF6C63FF), modifier = Modifier.size(15.dp))
+                            if (selectedId == node.entity.id) Icon(Icons.Default.Check, null, tint = catColor, modifier = Modifier.size(15.dp))
                         }
                         renderNodes(node.children)
                     }
@@ -1067,6 +1088,46 @@ fun CategoryPickerDialog(tree: List<CategoryNode>, selectedId: Long?, onSelect: 
         dismissButton = { TextButton(onClick = onDismiss) { Text("取消", color = Color(0xFF8888AA)) } }
     )
 }
+
+// @Composable
+// fun CategoryPickerDialog(tree: List<CategoryNode>, selectedId: Long?, onSelect: (Long?) -> Unit, onDismiss: () -> Unit) {
+//     AlertDialog(onDismissRequest = onDismiss, containerColor = Color(0xFF1E1E2E), shape = RoundedCornerShape(16.dp),
+//         title = { Text("选择分类", color = Color.White, fontWeight = FontWeight.Bold) },
+//         text = {
+//             Column(modifier = Modifier.verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+//                 // 未分类选项
+//                 Row(modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(8.dp))
+//                     .background(if (selectedId == null) Color(0xFF6C63FF).copy(0.18f) else Color.Transparent)
+//                     .clickable { onSelect(null) }.padding(12.dp),
+//                     verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+//                     Icon(Icons.Default.FolderOff, null, tint = Color(0xFF8888AA), modifier = Modifier.size(16.dp))
+//                     Text("未分类", color = if (selectedId == null) Color.White else Color(0xFFBBBBCC), fontSize = 14.sp)
+//                     if (selectedId == null) { Spacer(modifier = Modifier.weight(1f)); Icon(Icons.Default.Check, null, tint = Color(0xFF6C63FF), modifier = Modifier.size(16.dp)) }
+//                 }
+//                 Divider(color = Color(0xFF2A2A38), modifier = Modifier.padding(vertical = 4.dp))
+//                 @Composable
+//                 fun renderNodes(nodes: List<CategoryNode>) {
+//                     nodes.forEach { node ->
+//                         Row(modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(8.dp))
+//                             .background(if (selectedId == node.entity.id) Color(0xFF6C63FF).copy(0.18f) else Color.Transparent)
+//                             .clickable { onSelect(node.entity.id) }
+//                             .padding(start = (12 + node.depth * 18).dp, end = 12.dp, top = 10.dp, bottom = 10.dp),
+//                             verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+//                             Icon(if (node.children.isEmpty()) Icons.Default.Label else Icons.Default.Folder, null,
+//                                 tint = if (selectedId == node.entity.id) Color(0xFF6C63FF) else Color(0xFF8888AA), modifier = Modifier.size(15.dp))
+//                             Text(node.entity.name, color = if (selectedId == node.entity.id) Color.White else Color(0xFFBBBBCC), fontSize = 14.sp, modifier = Modifier.weight(1f))
+//                             if (selectedId == node.entity.id) Icon(Icons.Default.Check, null, tint = Color(0xFF6C63FF), modifier = Modifier.size(15.dp))
+//                         }
+//                         renderNodes(node.children)
+//                     }
+//                 }
+//                 renderNodes(tree)
+//             }
+//         },
+//         confirmButton = {},
+//         dismissButton = { TextButton(onClick = onDismiss) { Text("取消", color = Color(0xFF8888AA)) } }
+//     )
+// }
 
 // ═══════════════════════════════════════
 // 图片网格（旧路径 + 新URI 混合）
