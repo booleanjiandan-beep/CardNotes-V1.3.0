@@ -1040,6 +1040,7 @@ fun CategoryPickerDialog(tree: List<CategoryNode>, selectedId: Long?, onSelect: 
                     if (selectedId == null) { Spacer(modifier = Modifier.weight(1f)); Icon(Icons.Default.Check, null, tint = Color(0xFF6C63FF), modifier = Modifier.size(16.dp)) }
                 }
                 Divider(color = Color(0xFF2A2A38), modifier = Modifier.padding(vertical = 4.dp))
+                @Composable
                 fun renderNodes(nodes: List<CategoryNode>) {
                     nodes.forEach { node ->
                         Row(modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(8.dp))
