@@ -165,7 +165,7 @@ fun CardNoteApp(vm: NoteViewModel = viewModel()) {
                     if (notes.isEmpty()) EmptyStateView(filterState, uiState.searchQuery)
                     else {
                         HorizontalPager(state = pager, modifier = Modifier.fillMaxSize(),
-                            contentPadding = PaddingValues(horizontal = 32.dp), pageSpacing = 16.dp
+                            contentPadding = PaddingValues(horizontal = 16.dp), pageSpacing = 16.dp
                         ) { idx ->
                             val note = notes[idx]
                             val offset = (pager.currentPage - idx) + pager.currentPageOffsetFraction
@@ -615,7 +615,7 @@ fun NoteCard(
     val catColor = catEntry?.let { parseColor(it.entity.colorHex) } ?: Color(0xFF6C63FF)
 
     Card(
-        modifier = Modifier.fillMaxWidth().fillMaxHeight(0.82f)
+        modifier = Modifier.fillMaxWidth().fillMaxHeight(0.92f)
             .graphicsLayer { scaleX = scale; scaleY = scale; alpha = 1f - (abs(pageOffset) * 0.3f).coerceIn(0f, 0.3f) }
             .shadow(24.dp, RoundedCornerShape(24.dp),
                 ambientColor = Color(0xFF6C63FF).copy(0.3f), spotColor = Color(0xFF6C63FF).copy(0.4f)),
@@ -625,7 +625,7 @@ fun NoteCard(
         Column(modifier = Modifier.fillMaxSize()) {
 
             // ── 图片区域 ──
-            Box(modifier = Modifier.fillMaxWidth().fillMaxHeight(0.5f)
+            Box(modifier = Modifier.fillMaxWidth().fillMaxHeight(0.65f)
                 .clip(RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp))
                 .background(Color(0xFF252535))
                 .pointerInput(note.id) {
