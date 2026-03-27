@@ -25,6 +25,6 @@ data class CategoryEntity(
     val id: Long = 0,
     val name: String,
     val parentId: Long? = null,   // null = 顶级分类
-    val sortOrder: Int = 0，
+    val sortOrder: Int = 0, 
     val colorHex: String = "#6C63FF"   // ← 新增这一行
 )
