@@ -126,8 +126,8 @@ fun CardNoteApp(vm: NoteViewModel = viewModel()) {
         floatingActionButton = {
             FloatingActionButton(onClick = { vm.showAddSheet() },
                 containerColor = Color(0xFF6C63FF), contentColor = Color.White,
-                shape = RoundedCornerShape(8.dp), elevation = FloatingActionButtonDefaults.elevation(4.dp)
-            ) { Icon(Icons.Default.Add, "新增笔记", modifier = Modifier.size(16.dp)) }
+                shape = RoundedCornerShape(16.dp), elevation = FloatingActionButtonDefaults.elevation(8.dp),modifier = Modifier.size(36.dp)
+            ) { Icon(Icons.Default.Add, "新增笔记", modifier = Modifier.size(24.dp)) }
         }
     ) { pad ->
         Row(modifier = Modifier.fillMaxSize().padding(pad)) {
