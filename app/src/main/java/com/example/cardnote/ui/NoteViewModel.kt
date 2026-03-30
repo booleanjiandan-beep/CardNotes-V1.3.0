@@ -184,41 +184,28 @@ class NoteViewModel(application: Application) : AndroidViewModel(application) {
     //             _uiState.update { it.copy(selectedCategoryId = null) }
     //     }
     // }
-    
-    fun deleteCategory(cat: CategoryEntity) {
+        fun deleteCategory(cat: CategoryEntity) {
         viewModelScope.launch {
             val tree = _uiState.value.categoryTree
-            // 收集目标分类 + 所有子分类的 ID（利用你已有的 collectIds）
             val categoryIds = collectIds(tree, cat.id) ?: listOf(cat.id)
 
-            // === 1. 获取该分类树下所有笔记（使用你已有的 queryNotes，不需要改 Repository）===
             val allFilter = FilterState(showDownloaded = true, showNotDownloaded = true)
             val notesToDelete = noteRepo.queryNotes(categoryIds, allFilter, "").first()
 
-            // === 2. 删除笔记及其关联图片 ===
             notesToDelete.forEach { note ->
                 ImageStorageManager.deleteImages(note.images)
                 noteRepo.deleteNote(note)
             }
 
-            // === 3. 删除分类本身（保持原有行为）===
             catRepo.delete(cat)
 
-            // === 4. 如果当前正选中这个分类，就切回“全部笔记”===
             if (_uiState.value.selectedCategoryId == cat.id) {
                 _uiState.update { it.copy(selectedCategoryId = null) }
             }
-
-            // === 5. 提示用户 ===
-            val noteCount = notesToDelete.size
-            val message = if (noteCount > 0) {
-                "已删除分类「${cat.name}」及其下 $noteCount 条笔记"
-            } else {
-                "分类「${cat.name}」已删除"
-            }
-            _uiState.update { it.copy(snackbarMessage = message) }
+            // 不再显示任何 Snackbar
         }
     }
+    
     // ── 搜索 ──
     fun onSearchQueryChange(query: String) { _rawSearch.value = query; _uiState.update { it.copy(searchQuery = query) } }
     fun toggleSearch() { val a = !_uiState.value.isSearchActive; _uiState.update { it.copy(isSearchActive = a) }; if (!a) clearSearch() }
@@ -235,6 +222,21 @@ class NoteViewModel(application: Application) : AndroidViewModel(application) {
     fun showAddSheet()  { _uiState.update { it.copy(showAddSheet = true) } }
     fun hideAddSheet()  { _uiState.update { it.copy(showAddSheet = false) } }
 
+    // fun addNote(name: String, url: String, isDownloaded: Boolean, remarks: String,
+    //             imageUris: List<Uri>, categoryId: Long?) {
+    //     viewModelScope.launch {
+    //         _uiState.update { it.copy(isLoading = true) }
+    //         try {
+    //             val paths = ImageStorageManager.copyAllToPrivateStorage(appCtx, imageUris)
+    //             noteRepo.insertNote(NoteEntity(name = name.trim(), url = url.trim(),
+    //                 isDownloaded = isDownloaded, remarks = remarks.trim(),
+    //                 images = paths, categoryId = categoryId))
+    //             _uiState.update { it.copy(showAddSheet = false, snackbarMessage = "笔记已添加") }
+    //         } catch (e: Exception) {
+    //             _uiState.update { it.copy(snackbarMessage = "添加失败：${e.message}") }
+    //         } finally { _uiState.update { it.copy(isLoading = false) } }
+    //     }
+    // }
     fun addNote(name: String, url: String, isDownloaded: Boolean, remarks: String,
                 imageUris: List<Uri>, categoryId: Long?) {
         viewModelScope.launch {
@@ -244,13 +246,12 @@ class NoteViewModel(application: Application) : AndroidViewModel(application) {
                 noteRepo.insertNote(NoteEntity(name = name.trim(), url = url.trim(),
                     isDownloaded = isDownloaded, remarks = remarks.trim(),
                     images = paths, categoryId = categoryId))
-                _uiState.update { it.copy(showAddSheet = false, snackbarMessage = "笔记已添加") }
+                _uiState.update { it.copy(showAddSheet = false) }   // ← 只关闭弹窗，不显示 Snackbar
             } catch (e: Exception) {
                 _uiState.update { it.copy(snackbarMessage = "添加失败：${e.message}") }
             } finally { _uiState.update { it.copy(isLoading = false) } }
         }
     }
-
     // ── 编辑 Sheet ──
     fun showEditSheet(note: NoteEntity) { _uiState.update { it.copy(noteToEdit = note) } }
     fun hideEditSheet()                  { _uiState.update { it.copy(noteToEdit = null) } }
@@ -266,7 +267,7 @@ class NoteViewModel(application: Application) : AndroidViewModel(application) {
                 noteRepo.updateNote(note.copy(name = name.trim(), url = url.trim(),
                     isDownloaded = isDownloaded, remarks = remarks.trim(),
                     images = (keptPaths + newPaths).take(9), categoryId = categoryId))
-                _uiState.update { it.copy(noteToEdit = null, snackbarMessage = "笔记已更新") }
+                _uiState.update { it.copy(noteToEdit = null) }
             } catch (e: Exception) {
                 _uiState.update { it.copy(snackbarMessage = "保存失败：${e.message}") }
             } finally { _uiState.update { it.copy(isLoading = false) } }
@@ -281,7 +282,7 @@ class NoteViewModel(application: Application) : AndroidViewModel(application) {
         viewModelScope.launch {
             ImageStorageManager.deleteImages(note.images)
             noteRepo.deleteNote(note)
-            _uiState.update { it.copy(noteToDelete = null, snackbarMessage = "「${note.name}」已删除") }
+            _uiState.update { it.copy(noteToDelete = null) }
         }
     }
 
