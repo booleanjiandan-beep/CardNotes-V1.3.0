@@ -38,6 +38,7 @@ interface CategoryDao {
     @Query("DELETE FROM categories WHERE id = :id")
     suspend fun deleteCategoryById(id: Long)
 
+    
     /** 指定分类集合（自身 + 所有后代）的全部笔记 */
     @Query("SELECT * FROM notes WHERE categoryId IN (:categoryIds) ORDER BY id DESC")
     fun getNotesByCategoryIds(categoryIds: List<Long>): Flow<List<NoteEntity>>
