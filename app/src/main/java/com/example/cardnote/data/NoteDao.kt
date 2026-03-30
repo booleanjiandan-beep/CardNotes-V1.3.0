@@ -35,7 +35,26 @@ interface NoteDao {
     /** 未分类笔记 */
     @Query("SELECT * FROM notes WHERE categoryId IS NULL ORDER BY id DESC")
     fun getUncategorizedNotes(): Flow<List<NoteEntity>>
-
+    
+    /** 指定分类集合（自身 + 所有后代）的全部笔记 */
+    @Query("SELECT * FROM notes WHERE categoryId IN (:categoryIds) ORDER BY id DESC")
+    fun getNotesByCategoryIds(categoryIds: List<Long>): Flow<List<NoteEntity>>
+    
+    @Query("SELECT * FROM notes WHERE categoryId IN (:categoryIds) AND isDownloaded = 1 ORDER BY id DESC")
+    fun getDownloadedByCategoryIds(categoryIds: List<Long>): Flow<List<NoteEntity>>
+    
+    @Query("SELECT * FROM notes WHERE categoryId IN (:categoryIds) AND isDownloaded = 0 ORDER BY id DESC")
+    fun getNotDownloadedByCategoryIds(categoryIds: List<Long>): Flow<List<NoteEntity>>
+    
+    @Query("""SELECT * FROM notes WHERE categoryId IN (:categoryIds) AND
+        (name LIKE '%' || :q || '%' OR url LIKE '%' || :q || '%' OR remarks LIKE '%' || :q || '%')
+        ORDER BY id DESC""")
+    fun searchByCategoryIds(q: String, categoryIds: List<Long>): Flow<List<NoteEntity>>
+    
+    @Query("""SELECT * FROM notes WHERE categoryId IN (:categoryIds) AND isDownloaded = :dl AND
+        (name LIKE '%' || :q || '%' OR url LIKE '%' || :q || '%' OR remarks LIKE '%' || :q || '%')
+        ORDER BY id DESC""")
+    fun searchByCategoryIdsAndDownload(q: String, categoryIds: List<Long>, dl: Boolean): Flow<List<NoteEntity>>
     // ── 搜索 ──
 
     @Query("""SELECT * FROM notes WHERE
