@@ -129,7 +129,7 @@ class NoteViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     private fun buildTree(all: List<CategoryEntity>, parentId: Long?, depth: Int): List<CategoryNode> {
-        if (depth >= 3) return emptyList()
+        if (depth >= 4) return emptyList()
         return all.filter { it.parentId == parentId }.map { cat ->
             CategoryNode(entity = cat, depth = depth,
                 children = buildTree(all, cat.id, depth + 1))
@@ -168,7 +168,7 @@ class NoteViewModel(application: Application) : AndroidViewModel(application) {
     fun addCategory(name: String, parentId: Long?, colorHex: String = "#6C63FF") {
         viewModelScope.launch {
             if (parentId != null && !catRepo.canAddChild(parentId)) {
-                _uiState.update { it.copy(snackbarMessage = "最多支持三级分类") }
+                _uiState.update { it.copy(snackbarMessage = "最多支持四级分类") }
                 return@launch
             }
             catRepo.insert(CategoryEntity(name = name.trim(), parentId = parentId, colorHex = colorHex))
