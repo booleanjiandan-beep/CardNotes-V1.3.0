@@ -92,7 +92,7 @@ class CategoryRepository(private val dao: CategoryDao) {
     }
     suspend fun canAddChild(parentId: Long): Boolean {
         val parentDepth = getDepth(parentId)
-        return parentDepth < 3   // 最多三级：depth 1/2/3
+        return parentDepth < 4   // 最多四级：depth 1/2/3/4
     }
     suspend fun insert(cat: CategoryEntity) = dao.insertCategory(cat)
     suspend fun update(cat: CategoryEntity) = dao.updateCategory(cat)
