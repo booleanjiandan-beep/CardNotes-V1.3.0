@@ -267,7 +267,7 @@ fun CategoryNodeItem(
     var showAddChild by remember { mutableStateOf(false) }
     var showRename   by remember { mutableStateOf(false) }
     var expanded     by remember { mutableStateOf(true) }
-    val canAddChild  = node.depth < 2
+    val canAddChild  = node.depth < 3
     val accentColor  = parseColor(node.entity.colorHex)
 
     CategoryItem(
