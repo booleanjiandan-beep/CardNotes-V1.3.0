@@ -44,7 +44,9 @@ data class NoteUiState(
     val snackbarMessage: String? = null
 )
 
-private data class QueryKey(val catId: Long?, val filter: FilterState, val search: String)
+// private data class QueryKey(val catId: Long?, val filter: FilterState, val search: String)
+// 改为携带 id 列表
+private data class QueryKey(val categoryIds: List<Long>?, val filter: FilterState, val search: String)
 
 @OptIn(ExperimentalCoroutinesApi::class, FlowPreview::class)
 class NoteViewModel(application: Application) : AndroidViewModel(application) {
@@ -79,6 +81,7 @@ class NoteViewModel(application: Application) : AndroidViewModel(application) {
         viewModelScope.launch {
             combine(
                 _uiState.map { it.selectedCategoryId }.distinctUntilChanged(),
+                _uiState.map { it.categoryTree }.distinctUntilChanged(),   // ← 新增，需要 tree 才能展开 ids
                 _filterState,
                 _searchQuery
             ) { catId, filter, search -> QueryKey(catId, filter, search) }
@@ -106,6 +109,25 @@ class NoteViewModel(application: Application) : AndroidViewModel(application) {
             CategoryNode(entity = cat, depth = depth,
                 children = buildTree(all, cat.id, depth + 1))
         }
+    }
+    
+    /** 收集某分类节点自身 + 所有后代的 id */
+    private fun collectIds(nodes: List<CategoryNode>, targetId: Long): List<Long>? {
+        for (node in nodes) {
+            if (node.entity.id == targetId) {
+                // 找到目标节点，收集自身 + 所有后代
+                val result = mutableListOf<Long>()
+                fun collect(n: CategoryNode) {
+                    result.add(n.entity.id)
+                    n.children.forEach { collect(it) }
+                }
+                collect(node)
+                return result
+            }
+            // 递归搜索子树
+            collectIds(node.children, targetId)?.let { return it }
+        }
+        return null
     }
 
     // ── 分类操作 ──
