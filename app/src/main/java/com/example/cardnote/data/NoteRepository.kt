@@ -11,30 +11,27 @@ class NoteRepository(private val dao: NoteDao) {
 
     /** 根据分类 + 下载筛选 + 搜索词，返回对应 Flow */
     fun queryNotes(
-        categoryId: Long?,        // null = 全部分类
+        categoryIds: List<Long>?,   // ← 改为列表
         filter: FilterState,
         search: String
     ): Flow<List<NoteEntity>> {
         val q = search.trim()
         return when {
-            // ── 有搜索词 ──
-            q.isNotBlank() && categoryId != null -> when {
-                filter.showAll        -> dao.searchByCategory(q, categoryId)
-                filter.showDownloaded -> dao.searchByCategoryAndDownload(q, categoryId, true)
-                else                  -> dao.searchByCategoryAndDownload(q, categoryId, false)
+            q.isNotBlank() && categoryIds != null -> when {
+                filter.showAll        -> dao.searchByCategoryIds(q, categoryIds)
+                filter.showDownloaded -> dao.searchByCategoryIdsAndDownload(q, categoryIds, true)
+                else                  -> dao.searchByCategoryIdsAndDownload(q, categoryIds, false)
             }
             q.isNotBlank() -> when {
                 filter.showAll        -> dao.searchAllNotes(q)
                 filter.showDownloaded -> dao.searchDownloadedNotes(q)
                 else                  -> dao.searchNotDownloadedNotes(q)
             }
-            // ── 无搜索词，按分类 ──
-            categoryId != null -> when {
-                filter.showAll        -> dao.getNotesByCategory(categoryId)
-                filter.showDownloaded -> dao.getDownloadedByCategory(categoryId)
-                else                  -> dao.getNotDownloadedByCategory(categoryId)
+            categoryIds != null -> when {
+                filter.showAll        -> dao.getNotesByCategoryIds(categoryIds)
+                filter.showDownloaded -> dao.getDownloadedByCategoryIds(categoryIds)
+                else                  -> dao.getNotDownloadedByCategoryIds(categoryIds)
             }
-            // ── 无搜索词，无分类筛选 ──
             else -> when {
                 filter.showAll        -> dao.getAllNotes()
                 filter.showDownloaded -> dao.getDownloadedNotes()
@@ -42,6 +39,40 @@ class NoteRepository(private val dao: NoteDao) {
             }
         }
     }
+
+    
+    // fun queryNotes(
+    //     categoryId: Long?,        // null = 全部分类
+    //     filter: FilterState,
+    //     search: String
+    // ): Flow<List<NoteEntity>> {
+    //     val q = search.trim()
+    //     return when {
+    //         // ── 有搜索词 ──
+    //         q.isNotBlank() && categoryId != null -> when {
+    //             filter.showAll        -> dao.searchByCategory(q, categoryId)
+    //             filter.showDownloaded -> dao.searchByCategoryAndDownload(q, categoryId, true)
+    //             else                  -> dao.searchByCategoryAndDownload(q, categoryId, false)
+    //         }
+    //         q.isNotBlank() -> when {
+    //             filter.showAll        -> dao.searchAllNotes(q)
+    //             filter.showDownloaded -> dao.searchDownloadedNotes(q)
+    //             else                  -> dao.searchNotDownloadedNotes(q)
+    //         }
+    //         // ── 无搜索词，按分类 ──
+    //         categoryId != null -> when {
+    //             filter.showAll        -> dao.getNotesByCategory(categoryId)
+    //             filter.showDownloaded -> dao.getDownloadedByCategory(categoryId)
+    //             else                  -> dao.getNotDownloadedByCategory(categoryId)
+    //         }
+    //         // ── 无搜索词，无分类筛选 ──
+    //         else -> when {
+    //             filter.showAll        -> dao.getAllNotes()
+    //             filter.showDownloaded -> dao.getDownloadedNotes()
+    //             else                  -> dao.getNotDownloadedNotes()
+    //         }
+    //     }
+    // }
 
     suspend fun insertNote(note: NoteEntity)  = dao.insertNote(note)
     suspend fun updateNote(note: NoteEntity)  = dao.updateNote(note)
