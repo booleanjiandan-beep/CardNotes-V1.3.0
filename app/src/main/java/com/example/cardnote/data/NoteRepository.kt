@@ -11,34 +11,34 @@ class NoteRepository(private val dao: NoteDao) {
 
     /** 根据分类 + 下载筛选 + 搜索词，返回对应 Flow */
     fun queryNotes(
-        categoryIds: List<Long>?,   // ← 改为列表
-        filter: FilterState,
-        search: String
+    categoryIds: List<Long>?,
+    filter: FilterState,
+    search: String
     ): Flow<List<NoteEntity>> {
-        val q = search.trim()
-        return when {
-            q.isNotBlank() && categoryIds != null -> when {
-                filter.showAll        -> dao.searchByCategoryIds(q, categoryIds)
-                filter.showDownloaded -> dao.searchByCategoryIdsAndDownload(q, categoryIds, true)
-                else                  -> dao.searchByCategoryIdsAndDownload(q, categoryIds, false)
-            }
-            q.isNotBlank() -> when {
-                filter.showAll        -> dao.searchAllNotes(q)
-                filter.showDownloaded -> dao.searchDownloadedNotes(q)
-                else                  -> dao.searchNotDownloadedNotes(q)
-            }
-            categoryIds != null -> when {
-                filter.showAll        -> dao.getNotesByCategoryIds(categoryIds)
-                filter.showDownloaded -> dao.getDownloadedByCategoryIds(categoryIds)
-                else                  -> dao.getNotDownloadedByCategoryIds(categoryIds)
-            }
-            else -> when {
-                filter.showAll        -> dao.getAllNotes()
-                filter.showDownloaded -> dao.getDownloadedNotes()
-                else                  -> dao.getNotDownloadedNotes()
-            }
+    val q = search.trim()
+    return when {
+        q.isNotBlank() && categoryIds != null -> when {
+            filter.showAll        -> dao.searchByCategoryIds(q, categoryIds)
+            filter.showDownloaded -> dao.searchByCategoryIdsAndDownload(q, categoryIds, true)
+            else                  -> dao.searchByCategoryIdsAndDownload(q, categoryIds, false)
+        }
+        q.isNotBlank() -> when {
+            filter.showAll        -> dao.searchAllNotes(q)
+            filter.showDownloaded -> dao.searchDownloadedNotes(q)
+            else                  -> dao.searchNotDownloadedNotes(q)
+        }
+        categoryIds != null -> when {
+            filter.showAll        -> dao.getNotesByCategoryIds(categoryIds)
+            filter.showDownloaded -> dao.getDownloadedByCategoryIds(categoryIds)
+            else                  -> dao.getNotDownloadedByCategoryIds(categoryIds)
+        }
+        else -> when {
+            filter.showAll        -> dao.getAllNotes()
+            filter.showDownloaded -> dao.getDownloadedNotes()
+            else                  -> dao.getNotDownloadedNotes()
         }
     }
+}
 
     
     // fun queryNotes(
