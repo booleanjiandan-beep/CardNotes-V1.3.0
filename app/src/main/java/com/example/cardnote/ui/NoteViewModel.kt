@@ -81,20 +81,45 @@ class NoteViewModel(application: Application) : AndroidViewModel(application) {
         viewModelScope.launch {
             combine(
                 _uiState.map { it.selectedCategoryId }.distinctUntilChanged(),
-                _uiState.map { it.categoryTree }.distinctUntilChanged(),   // ← 新增，需要 tree 才能展开 ids
                 _filterState,
                 _searchQuery
-            ) { catId, filter, search -> QueryKey(catId, filter, search) }
+            ) { catId, filter, search ->
+                // 直接读 StateFlow 当前值，无需加入 combine
+                val tree = _uiState.value.categoryTree
+                val ids = if (catId == null) null else collectIds(tree, catId)
+                QueryKey(ids, filter, search)
+            }
                 .flatMapLatest { key ->
-                    noteRepo.queryNotes(key.catId, key.filter, key.search)
+                    noteRepo.queryNotes(key.categoryIds, key.filter, key.search)
                 }
                 .collect { notes ->
                     _uiState.update { state ->
-                        state.copy(filteredNotes = notes,
-                            currentPagerIndex = if (state.currentPagerIndex >= notes.size) 0 else state.currentPagerIndex)
+                        state.copy(
+                            filteredNotes = notes,
+                            currentPagerIndex = if (state.currentPagerIndex >= notes.size) 0
+                            else state.currentPagerIndex
+                        )
                     }
                 }
         }
+        
+        // viewModelScope.launch {
+        //     combine(
+        //         _uiState.map { it.selectedCategoryId }.distinctUntilChanged(),
+        //         _uiState.map { it.categoryTree }.distinctUntilChanged(),   // ← 新增，需要 tree 才能展开 ids
+        //         _filterState,
+        //         _searchQuery
+        //     ) { catId, filter, search -> QueryKey(catId, filter, search) }
+        //         .flatMapLatest { key ->
+        //             noteRepo.queryNotes(key.catId, key.filter, key.search)
+        //         }
+        //         .collect { notes ->
+        //             _uiState.update { state ->
+        //                 state.copy(filteredNotes = notes,
+        //                     currentPagerIndex = if (state.currentPagerIndex >= notes.size) 0 else state.currentPagerIndex)
+        //             }
+        //         }
+        // }
 
         viewModelScope.launch {
             _searchQuery.collect { q ->
