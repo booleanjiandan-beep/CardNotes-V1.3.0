@@ -110,12 +110,10 @@ class NoteViewModel(application: Application) : AndroidViewModel(application) {
                 children = buildTree(all, cat.id, depth + 1))
         }
     }
-    
-    /** 收集某分类节点自身 + 所有后代的 id */
+    // ── 收集分类自身+所有后代 id ──
     private fun collectIds(nodes: List<CategoryNode>, targetId: Long): List<Long>? {
         for (node in nodes) {
             if (node.entity.id == targetId) {
-                // 找到目标节点，收集自身 + 所有后代
                 val result = mutableListOf<Long>()
                 fun collect(n: CategoryNode) {
                     result.add(n.entity.id)
@@ -124,7 +122,6 @@ class NoteViewModel(application: Application) : AndroidViewModel(application) {
                 collect(node)
                 return result
             }
-            // 递归搜索子树
             collectIds(node.children, targetId)?.let { return it }
         }
         return null
